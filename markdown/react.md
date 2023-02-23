@@ -110,3 +110,4 @@ function List({ items }) {
 }
 ```
 
+![](/react/2023-02-23-14-30-17.png)
