@@ -257,4 +257,4 @@ function useData(url) {
 - 挂载(mount) - 当组件被添加到页面时
 - 更新(update) - 当组件的state或者props发生改变时
 - 卸载(unmount) - 当组件从页面上移除时
-
+![](/images/react/2023-02-25-17-47-46.png)
