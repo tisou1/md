@@ -250,11 +250,43 @@ function useData(url) {
 ## react Effects的生命周期
 
 与组件的生命周期不同, 一个Effect只能做两件事
-- 开始同步某些东西 (Effects)内容体
-- 然后停止同步 (清除函数)
+- 开始同步(synchronize)某些东西 (Effects)内容体
+- 然后停止同步(stop  synchronize) (清除函数)
 
 组件的生命周期
 - 挂载(mount) - 当组件被添加到页面时
 - 更新(update) - 当组件的state或者props发生改变时
 - 卸载(unmount) - 当组件从页面上移除时
-![](/images/react/2023-02-25-17-47-46.png)
+
+![](/images/react/2023-02-25-17-48-44.png)
+
+对比组件对的行为和`Effects`的行为, 我们可以发现他们还是有一定的心智区别的  
+所以后面不要将`Effect`用组件的生命周期来解释其执行  
+
+> 组件渲染之后,Effect的开始同步和停止同步...[]
+
+每次只专注与一个单一的**启动() 停止**周期.一个组件是在挂载,更新,还是卸载都不是很重要对于`Effect`来说
+
+不要把`Effects`当做组件的生命周期回调函数来看待.不然会很容易迷惑的
+
+
+
+**Each Effect in your code should represent a separate and independent synchronization process.**
+
+
+### Effect的依赖项为空空数组时
+
+如果以组件的角度来看的话, 就是`Effect`只有在组件挂载时才会链接到聊天室,只有在组件卸载时才会断开连接(clear up)  
+
+
+[Effect的行为](https://beta.reactjs.org/learn/lifecycle-of-reactive-effects#thinking-from-the-effects-perspective)
+如果以Effect的角度来看, 不需要考虑组件挂载和卸载问题,重要的是,你指定了`Effect`开始和停止同步的做法.
+
+
+## 所有在组件内部的变量都是响应性的
+
+`props`和`state`并不是唯一的响应性值, 用他们计算出来的值也是有响应性的.
+`props`和`state`发生变化时,组件重新渲染,由他们计算出的值也将发生变化.也就是说也会放到`Effects`的依赖项当中
+
+
+外部变量值和useRef()的返回值,也不能当做`Effect`的依赖项,因为当他们不是一个响应性的变量,即使他们发生变化,React也不会重新执行`Effect`
