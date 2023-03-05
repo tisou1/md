@@ -1,16 +1,16 @@
 # React
 
-## useEffect
+### useEffect
 
 [you-might-not-need-an-effect](https://beta.reactjs.org/learn/you-might-not-need-an-effect)
 
-### You Might Not Need an Effect(你或许并不需要useEffect)
+#### You Might Not Need an Effect(你或许并不需要useEffect)
 
 - You don’t need Effects to transform data for rendering.(不要在Effects中转换数据) 
   不要在`useEffect`中更新`state`,会引起重复渲染, 因为`state`更新后,`effect`就又会重新执行.
 - You don’t need Effects to handle user events.(不要在Effects中处理用户事件)
 
-### How to tell if a calculation is expensive? 如何评估一个计算是否是昂贵的
+#### How to tell if a calculation is expensive? 如何评估一个计算是否是昂贵的
 
   通常,除非你要创建或者循环处理成千上万的对象,否则可能并不昂贵
 
@@ -32,7 +32,7 @@ const visibleTodos = useMemo(() => {
 console.timeEnd('filter array');
 ```
 
-### 当props改变是,子组件改变`state`
+#### 当props改变是,子组件改变`state`
 ```jsx
 
 // React会第一次渲染使用一个旧值,然后再发现userId改变后,重置了comment,再次渲染
@@ -156,7 +156,7 @@ function List({ items }) {
   // ...
 ```
 
-### 获取数据
+#### 获取数据
 
 
 通常我们会在`useEffects`中加入类似下面的代码
@@ -247,7 +247,7 @@ function useData(url) {
 
 
 
-## react Effects的生命周期
+### react Effects的生命周期
 
 与组件的生命周期不同, 一个Effect只能做两件事
 - 开始同步(synchronize)某些东西 (Effects)内容体
@@ -274,7 +274,7 @@ function useData(url) {
 **Each Effect in your code should represent a separate and independent synchronization process.**
 
 
-### Effect的依赖项为空空数组时
+#### Effect的依赖项为空空数组时
 
 如果以组件的角度来看的话, 就是`Effect`只有在组件挂载时才会链接到聊天室,只有在组件卸载时才会断开连接(clear up)  
 
@@ -290,4 +290,260 @@ function useData(url) {
 
 
 外部变量值和useRef()的返回值,也不能当做`Effect`的依赖项,因为当他们不是一个响应性的变量,即使他们发生变化,React也不会重新执行`Effect`
+
+
+
+### 将Event和Effect分隔
+
+
+Effect Event 和 普通Event
+useEffectEvent 钩子
+
+```js
+  function Page({ url }) {
+  const { items } = useContext(ShoppingCartContext);
+  const numberOfItems = items.length;
+
+  const onVisit = useEffectEvent(visitedUrl => {
+    logVisit(visitedUrl, numberOfItems);
+  });
+
+  useEffect(() => {
+    onVisit(url);
+  }, [url]); // ✅ All dependencies declared
+  // ...
+
+  // 每次当url变化时, 就会调用Effect Event(onVisit)
+}
+```
+
+
+### 移除Effect的依赖
+
+- 有时,你想在依赖改变时重新执行Effeects的条件语句
+- 有时,你想读取某个依赖的最新值,而不是对其变化做出反应
+- 有时, 一个依赖时对象或者数组或者一个函数而无意中改变变得太繁琐
+
+
+1. **解决这些问题**首先你要确认可以吧这些代码移到事件处理中吗?
+
+这是一个表单的提交, 像这样的应该放到事件处理中,比较合适,不适合放在Effect中.
+```js
+function Form() {
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (submitted) {
+      // 🔴 Avoid: Event-specific logic inside an Effect
+      post('/api/register');
+      showNotification('Successfully registered!');
+    }
+  }, [submitted]);
+
+  function handleSubmit() {
+    setSubmitted(true);
+  }
+
+  // ...
+}
+```
+
+2. 你的Effect是否在做一些无关的事
+
+```js
+  function ShippingForm({ country }) {
+  const [cities, setCities] = useState(null);
+  const [city, setCity] = useState(null);
+  const [areas, setAreas] = useState(null);
+
+  useEffect(() => {
+    let ignore = false;
+    fetch(`/api/cities?country=${country}`)
+      .then(response => response.json())
+      .then(json => {
+        if (!ignore) {
+          setCities(json);
+        }
+      });
+    // 🔴 Avoid: A single Effect synchronizes two independent processes
+    if (city) {
+      fetch(`/api/areas?city=${city}`)
+        .then(response => response.json())
+        .then(json => {
+          if (!ignore) {
+            setAreas(json);
+          }
+        });
+    }
+    return () => {
+      ignore = true;
+    };
+  }, [country, city]); // ✅ All dependencies declared
+
+  // ...
+```
+
+这你Effect中下面根据city来获取区域, 然后你得在依赖中加入city, 当选择city时,Effect就会执行, 结果是,将不必要的多次执行获取城市列表
+
+这里就是将两块不是相关的东西放到了一起,最好是拆开
+```js
+  function ShippingForm({ country }) {
+  const [cities, setCities] = useState(null);
+  useEffect(() => {
+    let ignore = false;
+    fetch(`/api/cities?country=${country}`)
+      .then(response => response.json())
+      .then(json => {
+        if (!ignore) {
+          setCities(json);
+        }
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [country]); // ✅ All dependencies declared
+
+  const [city, setCity] = useState(null);
+  const [areas, setAreas] = useState(null);
+  useEffect(() => {
+    if (city) {
+      let ignore = false;
+      fetch(`/api/areas?city=${city}`)
+        .then(response => response.json())
+        .then(json => {
+          if (!ignore) {
+            setAreas(json);
+          }
+        });
+      return () => {
+        ignore = true;
+      };
+    }
+  }, [city]); // ✅ All dependencies declared
+
+  // ...
+```
+
+
+3. 是否是读取一些状态来计算下一个状态
+
+```js
+  function ChatRoom({ roomId }) {
+  const [messages, setMessages] = useState([]);
+  useEffect(() => {
+    const connection = createConnection();
+    connection.connect();
+    connection.on('message', (receivedMessage) => {
+      setMessages([...messages, receivedMessage]);
+    });
+    return () => connection.disconnect();
+  }, [roomId, messages]); // ✅ All dependencies declared
+  // ...
+```
+这里的问题是,当使用setMessages时, messages改变组件会重新渲染,这个Effect也会重新执行,就会造成死循环
+解决的办法就是,使用setState的函数式更新,这样就不用把message添加到依赖项中了
+
+React会把你的更新函数放在一个队列中，并在下一次渲染时向它提供msgs参数。
+
+```js
+  function ChatRoom({ roomId }) {
+  const [messages, setMessages] = useState([]);
+  useEffect(() => {
+    const connection = createConnection();
+    connection.connect();
+    connection.on('message', (receivedMessage) => {
+      setMessages(message => [...messages, receivedMessage]);
+    });
+    return () => connection.disconnect();
+  }, [roomId]); // ✅ All dependencies declared
+  // ...
+```
+
+4. 使用数组,对象,函数作为依赖项
+
+```js
+  function ChatRoom({ roomId }) {
+  // ...
+  const options = {
+    serverUrl: serverUrl,
+    roomId: roomId
+  };
+
+  useEffect(() => {
+    const connection = createConnection(options);
+    connection.connect();
+    // ...
+```
+
+每次由于其他state改变,组件重新渲染时,options都是一个新的引用,所以Effect也会重新执行  
+
+- 尝试将他们移到组件外部或者从他们中提取原始值
+
+```js
+  function ChatRoom() {
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    const connection = createConnection(options);
+    connection.connect();
+    return () => connection.disconnect();
+  }, []); // ✅ All dependencies declared
+  // ...
+```
+
+对于函数也是适用的
+
+```js
+  function createOptions() {
+  return {
+    serverUrl: 'https://localhost:1234',
+    roomId: 'music'
+  };
+}
+
+function ChatRoom() {
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    const options = createOptions();
+    const connection = createConnection();
+    connection.connect();
+    return () => connection.disconnect();
+  }, []); // ✅ All dependencies declared
+  // ...
+```
+
+`createOptions`被声明2在组件外部,所以他不是响应性的值
+
+如果你的对象依赖响应性的值,你可以把对象放在Effect中
+
+```  js
+useEffect(() => {
+    const options = {
+      serverUrl: serverUrl,
+      roomId: roomId
+    };
+    const connection = createConnection(options);
+    connection.connect();
+    return () => connection.disconnect();
+  }, [roomId]); // 
+
+```
+
+当你的对象来自父组件时,
+最好是直接读取要用得值,因为要用的值,是基本类型,所以在组件重新渲染时,只要值不变,Effect就不会重新执行
+
+```js
+  const { roomId, serverUrl } = options;
+  useEffect(() => {
+    const connection = createConnection({
+      roomId: roomId,
+      serverUrl: serverUrl
+    });
+    connection.connect();
+    return () => connection.disconnect();
+  }, [roomId, serverUrl]); // ✅ All dependencies declared
+```
+
+`setState`的用途,当你的`Effect`的依赖项中有该state, 当`Effect`执行时你又需要读取最新的`state`, 这时候就需要用到函数式更新了, 这样就可以吧该`state`从依赖项中移除.
 
