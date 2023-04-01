@@ -299,6 +299,44 @@ function useData(url) {
 Effect Event 和 普通Event
 useEffectEvent 钩子
 
+
+```js
+  function ChatRoom({ roomId, theme }) {
+  useEffect(() => {
+    const connection = createConnection(serverUrl, roomId);
+    connection.on('connected', () => {
+      showNotification('Connected!', theme);
+    });
+    connection.connect();
+    return () => connection.disconnect();
+  }, [roomId, theme]);
+
+  return <h1>Welcome to the {roomId} room!</h1>
+}
+```
+
+当使用`ChatRooom`组件时, roomId, theme改变都会重新链接,这不是很好,但是呢,我们有需要theme来确定主题
+
+在这里,onConnected被称为一个effect事件, 它是你逻辑的一部分,但是他的行为更像是一个事件处理器,里面的逻辑不是反应式的,而且它能读取到最新的props和state
+```js
+function ChatRoom({ roomId, theme }) {
+  const onConnected = useEffectEvent(() => {
+    showNotification('Connected!', theme);
+  });
+
+  useEffect(() => {
+    const connection = createConnection(serverUrl, roomId);
+    connection.on('connected', () => {
+      onConnected();
+    });
+    connection.connect();
+    return () => connection.disconnect();
+  }, [roomId]); // ✅ All dependencies declared
+  // ...
+
+```
+这时候如果改变theme,不会触发effet执行, 当roomID改变重新连接时, 又能读取到最新的theme来确定主题
+
 ```js
   function Page({ url }) {
   const { items } = useContext(ShoppingCartContext);
