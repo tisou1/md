@@ -15,6 +15,8 @@
 `react 16.8.0`之后,函数组件和类组件都会被转换为`fiber`节点,`fiber`节点上会保存组件的`state`,`propss`等信息.  
 不同的是,类组件在实例化之后,实例上也会保存组件的信息,当我们调用`this.setState()`时,会将新的状态存放在实例上,并在`fiber`上记录组件的更新操作,在下一次更新时，React会使用新的state值创建一个新的Fiber节点，并将其与旧的Fiber节点进行比较，从而计算出哪些部分需要更新，哪些部分需要重新渲染。
 
+react提供的useState和useReducer可以让函数组件在函数内部定义状态.这些状态保存在对应的hook(useState)上, hook又是以单链表的形式存在fiber上,fiber就是react上的虚拟dom,存在于内存中.
+
 **由于Class组件的实例和Fiber节点都保存了组件的状态和props等信息，因此在组件更新时，React需要进行额外的同步和协调操作，以确保组件的状态和props值的一致性。**
 
 React会在Function Component首次调用时，创建一个对应的Fiber节点，并在该节点中保存Function Component的props和其他信息。当组件被重新渲染时，React会重用这个Fiber节点，并将更新后的props传递给Function Component。  
