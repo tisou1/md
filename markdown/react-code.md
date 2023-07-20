@@ -30,4 +30,25 @@ React会在Function Component首次调用时，创建一个对应的Fiber节点�
 
 
 
-#### 3. 
+#### 3. react性能优化
+
+**将变得部分和不变的部分分离**
+1. props
+2. state
+3. context
+
+其中props和context都是由state演化而来
+
+
+全等比较--高效,但不容易命中,如果不加任何优化手段(memo,useMemo, PureComponent)时, 新旧props地址不同
+浅比较--不高效,但容易命中(对比props中的key和value), 新旧props的地址不同,再去比较props里的key value
+
+
+当一次判断没有命中时,会根据`fiberNode.tag`走不同的逻辑,其中有些类型的节点会走第二次判断,就会有命中的可能
+第一次判断时,props使用的全等比较,只要调用了`reactElement`,newProps就是一个全新对象,即使属性都相同也不全等,如果使用浅比较的方式,命中概率会高很多  
+
+
+
+
+react的props默认是全等比较`Object.is()`
+如果组件使用memo或者继承了`PureComponent`组件, 则开启了浅比较
